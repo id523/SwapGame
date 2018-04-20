@@ -13,6 +13,9 @@
 #include "IMGi.h"
 #include "TTFi.h"
 
+// "Conversion, possible loss of data"
+#pragma warning(disable: 4244)
+
 using namespace std;
 
 #define GAME_STATE int64_t
@@ -34,7 +37,8 @@ DELETER_CLASS(SDL_Window, SDL_DestroyWindow);
 DELETER_CLASS(SDL_Surface, SDL_FreeSurface);
 DELETER_CLASS(SDL_Texture, SDL_DestroyTexture);
 
-GAME_STATE PerformSwap(GAME_STATE s, int sp1, int sp2) {
+GAME_STATE PerformSwap(GAME_STATE s, int sp1, bool vertical) {
+	int sp2 = sp1 + (vertical ? BOARD_WIDTH : 1);
 	bool bit1 = !!(s & STATE_BIT(sp1));
 	bool bit2 = !!(s & STATE_BIT(sp2));
 	s &= ~STATE_BIT(sp1);
@@ -47,6 +51,59 @@ GAME_STATE PerformSwap(GAME_STATE s, int sp1, int sp2) {
 void GetScreenPos(int pos, int& x, int& y) {
 	x = START_X + SQUARE_SIZE * (pos % BOARD_WIDTH);
 	y = START_Y + SQUARE_SIZE * (pos / BOARD_WIDTH);
+}
+
+bool GetMoveFromPos(int mx, int my, int& swapPos, bool& vertical) {
+	mx -= START_X;
+	my -= START_Y;
+	int gx = mx / SQUARE_SIZE;
+	int gy = my / SQUARE_SIZE;
+	if (gx < 0 || gy < 0 || gx >= BOARD_WIDTH || gy >= BOARD_HEIGHT) {
+		return false;
+	}
+	int rx = mx - gx * SQUARE_SIZE;
+	int ry = my - gy * SQUARE_SIZE;
+	if (rx >= ry) {
+		if (rx >= SQUARE_SIZE - ry) {
+			// Quadrant Right
+			if (gx < BOARD_WIDTH - 1) {
+				swapPos = gy * BOARD_WIDTH + gx;
+				vertical = false;
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			// Quadrant Up
+			if (gy > 0) {
+				swapPos = (gy - 1) * BOARD_WIDTH + gx;
+				vertical = true;
+				return true;
+			} else {
+				return false;
+			}
+		}
+	} else {
+		if (rx >= SQUARE_SIZE - ry) {
+			// Quadrant Down
+			if (gy < BOARD_HEIGHT - 1) {
+				swapPos = gy * BOARD_WIDTH + gx;
+				vertical = true;
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			// Quadrant Left
+			if (gx > 0) {
+				swapPos = gy * BOARD_WIDTH + gx - 1;
+				vertical = false;
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
 }
 
 float lerp(float a, float b, float x) {
@@ -116,19 +173,32 @@ void SDLmain(int argc, char** argv)
 	const float endSwapAnimation = (float)(SQUARE_SIZE * 2 - 1) / (SQUARE_SIZE * 2);
 	float swapAnimation = 0;
 	float swapAnim2 = 0;
-	bool swapping = true;
-	bool vertical = true;
-	int swapPos = 12;
-	int swapPos2 = 18;
-	GAME_STATE finalState = PerformSwap(displayState, swapPos, swapPos2);
+	bool swapping = false;
+	bool vertical = false;
+	int swapPos = 0;
+	int mouseX = 0, mouseY = 0;
+	bool mouseClicked;
+	GAME_STATE finalState = displayState;
 	unordered_set<GAME_STATE> seenStates;
 	seenStates.insert(displayState);
 
 	while (running) {
+		mouseClicked = false;
 		while (SDL_PollEvent(&ev)) {
 			switch (ev.type) {
 			case SDL_QUIT: running = false; break;
+
 			case SDL_MOUSEMOTION:
+				mouseX = ev.motion.x;
+				mouseY = ev.motion.y;
+				break;
+
+			case SDL_MOUSEBUTTONDOWN:
+				if (ev.button.button == 1) {
+					mouseClicked = true;
+					mouseX = ev.button.x;
+					mouseY = ev.button.y;
+				}
 				break;
 			}
 		}
@@ -141,6 +211,7 @@ void SDLmain(int argc, char** argv)
 
 		dest = Rect_Black;
 		int x1, y1, x2, y2;
+		int swapPos2 = swapPos + (vertical ? BOARD_WIDTH : 1);
 		GetScreenPos(swapPos, x1, y1);
 		GetScreenPos(swapPos2, x2, y2);
 		for (int i = 0; i < BOARD_CELLS; i++) {
@@ -160,36 +231,23 @@ void SDLmain(int argc, char** argv)
 		if (swapping) {
 			swapAnim2 = lerp(swapAnim2, 1, ANIM_SPEED);
 			swapAnimation = lerp(swapAnimation, swapAnim2, ANIM_SPEED);
-			
 			if (swapAnimation > endSwapAnimation) {
 				swapping = false;
+				swapAnimation = 0.0f;
+				swapAnim2 = 0.0f;
+				displayState = finalState;
 			}
-			dest = vertical ? Rect_Highlight_1V : Rect_Highlight_1H;
-			GetScreenPos(swapPos, dest.x, dest.y);
-			SDL_RenderCopy(renderer, tex,
-				vertical ? &Rect_Highlight_1V : &Rect_Highlight_1H,
-				&dest);
-
 		} else {
-			swapAnimation = 0.0f;
-			swapAnim2 = 0.0f;
-			displayState = finalState;
-			seenStates.insert(displayState);
-			swapping = true;
-			while (seenStates.count(finalState)) {
-				vertical = !!(rand() & 1);
-				if (vertical) {
-					int x = rand() % BOARD_WIDTH;
-					int y = rand() % (BOARD_HEIGHT - 1);
-					swapPos = y * BOARD_WIDTH + x;
-					swapPos2 = swapPos + BOARD_WIDTH;
-				} else {
-					int x = rand() % (BOARD_WIDTH - 1);
-					int y = rand() % BOARD_HEIGHT;
-					swapPos = y * BOARD_WIDTH + x;
-					swapPos2 = swapPos + 1;
+			if (GetMoveFromPos(mouseX, mouseY, swapPos, vertical)) {
+				dest = vertical ? Rect_Highlight_1V : Rect_Highlight_1H;
+				GetScreenPos(swapPos, dest.x, dest.y);
+				SDL_RenderCopy(renderer, tex,
+					vertical ? &Rect_Highlight_1V : &Rect_Highlight_1H,
+					&dest);
+				if (mouseClicked) {
+					swapping = true;
+					finalState = PerformSwap(displayState, swapPos, vertical);
 				}
-				finalState = PerformSwap(displayState, swapPos, swapPos2);
 			}
 		}
 		SDL_RenderPresent(renderer);
