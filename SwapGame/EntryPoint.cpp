@@ -78,15 +78,35 @@ void SDLmain(int argc, char** argv)
 	Rect_Black.w = 80;
 	Rect_Black.h = 80;
 	SDL_Rect Rect_White;
-	Rect_White.x = 80;
-	Rect_White.y = 0;
+	Rect_White.x = 0;
+	Rect_White.y = 80;
 	Rect_White.w = 80;
 	Rect_White.h = 80;
 	SDL_Rect Rect_Board;
 	Rect_Board.x = 0;
-	Rect_Board.y = 80;
+	Rect_Board.y = 160;
 	Rect_Board.w = 480;
 	Rect_Board.h = 480;
+	SDL_Rect Rect_Highlight_1H;
+	Rect_Highlight_1H.x = 80;
+	Rect_Highlight_1H.y = 0;
+	Rect_Highlight_1H.w = 160;
+	Rect_Highlight_1H.h = 80;
+	SDL_Rect Rect_Highlight_0H;
+	Rect_Highlight_0H.x = 80;
+	Rect_Highlight_0H.y = 80;
+	Rect_Highlight_0H.w = 160;
+	Rect_Highlight_0H.h = 80;
+	SDL_Rect Rect_Highlight_1V;
+	Rect_Highlight_1V.x = 240;
+	Rect_Highlight_1V.y = 0;
+	Rect_Highlight_1V.w = 80;
+	Rect_Highlight_1V.h = 160;
+	SDL_Rect Rect_Highlight_0V;
+	Rect_Highlight_0V.x = 320;
+	Rect_Highlight_0V.y = 0;
+	Rect_Highlight_0V.w = 80;
+	Rect_Highlight_0V.h = 160;
 
 	bool running = true;
 	SDL_Event ev;
@@ -96,6 +116,7 @@ void SDLmain(int argc, char** argv)
 	float swapAnimation = 0;
 	float swapAnim2 = 0;
 	bool swapping = true;
+	bool vertical = true;
 	int swapPos = 12;
 	int swapPos2 = 18;
 	GAME_STATE finalState = PerformSwap(displayState, swapPos, swapPos2);
@@ -136,12 +157,18 @@ void SDLmain(int argc, char** argv)
 				&dest);
 		}
 		if (swapping) {
-			swapAnim2 = lerp(swapAnim2, 1, 0.5f);
-			swapAnimation = lerp(swapAnimation, swapAnim2, 0.5f);
+			swapAnim2 = lerp(swapAnim2, 1, 0.2f);
+			swapAnimation = lerp(swapAnimation, swapAnim2, 0.2f);
 			
 			if (swapAnimation > endSwapAnimation) {
 				swapping = false;
 			}
+			dest = vertical ? Rect_Highlight_1V : Rect_Highlight_1H;
+			GetScreenPos(swapPos, dest.x, dest.y);
+			SDL_RenderCopy(renderer, tex,
+				vertical ? &Rect_Highlight_1V : &Rect_Highlight_1H,
+				&dest);
+
 		} else {
 			swapAnimation = 0.0f;
 			swapAnim2 = 0.0f;
@@ -149,7 +176,7 @@ void SDLmain(int argc, char** argv)
 			seenStates.insert(displayState);
 			swapping = true;
 			while (seenStates.count(finalState)) {
-				bool vertical = !!(rand() & 1);
+				vertical = !!(rand() & 1);
 				if (vertical) {
 					int x = rand() % BOARD_WIDTH;
 					int y = rand() % (BOARD_HEIGHT - 1);
