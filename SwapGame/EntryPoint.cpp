@@ -24,6 +24,7 @@ using namespace std;
 #define SQUARE_SIZE 80
 #define START_X 160
 #define START_Y 0
+#define ANIM_SPEED 0.4f
 
 #define DELETER_CLASS(c, d) \
 struct c##_Deleter { void operator()(c* r) { if (r) d(r); } }
@@ -157,8 +158,8 @@ void SDLmain(int argc, char** argv)
 				&dest);
 		}
 		if (swapping) {
-			swapAnim2 = lerp(swapAnim2, 1, 0.2f);
-			swapAnimation = lerp(swapAnimation, swapAnim2, 0.2f);
+			swapAnim2 = lerp(swapAnim2, 1, ANIM_SPEED);
+			swapAnimation = lerp(swapAnimation, swapAnim2, ANIM_SPEED);
 			
 			if (swapAnimation > endSwapAnimation) {
 				swapping = false;
