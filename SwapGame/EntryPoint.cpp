@@ -236,17 +236,25 @@ void SDLmain(int argc, char** argv)
 				swapAnimation = 0.0f;
 				swapAnim2 = 0.0f;
 				displayState = finalState;
+				seenStates.insert(displayState);
 			}
 		} else {
 			if (GetMoveFromPos(mouseX, mouseY, swapPos, vertical)) {
 				dest = vertical ? Rect_Highlight_1V : Rect_Highlight_1H;
 				GetScreenPos(swapPos, dest.x, dest.y);
-				SDL_RenderCopy(renderer, tex,
-					vertical ? &Rect_Highlight_1V : &Rect_Highlight_1H,
-					&dest);
-				if (mouseClicked) {
+				finalState = PerformSwap(displayState, swapPos, vertical);
+				bool legalMove = !seenStates.count(finalState);
+				SDL_Rect *highlightV, *highlightH;
+				if (legalMove) {
+					highlightV = &Rect_Highlight_1V;
+					highlightH = &Rect_Highlight_1H;
+				} else {
+					highlightV = &Rect_Highlight_0V;
+					highlightH = &Rect_Highlight_0H;
+				}
+				SDL_RenderCopy(renderer, tex, vertical ? highlightV : highlightH, &dest);
+				if (mouseClicked && legalMove) {
 					swapping = true;
-					finalState = PerformSwap(displayState, swapPos, vertical);
 				}
 			}
 		}
