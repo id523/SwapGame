@@ -27,7 +27,7 @@ using namespace std;
 #define SQUARE_SIZE 80
 #define START_X 160
 #define START_Y 0
-#define ANIM_SPEED 0.4f
+#define ANIM_SPEED 0.35f
 
 #define DELETER_CLASS(c, d) \
 struct c##_Deleter { void operator()(c* r) { if (r) d(r); } }
@@ -105,6 +105,13 @@ bool GetMoveFromPos(int mx, int my, int& swapPos, bool& vertical) {
 		}
 	}
 }
+const GAME_STATE TopRowMask = (1LL << BOARD_WIDTH) - 1;
+const GAME_STATE BottomRowMask = TopRowMask << (BOARD_WIDTH * (BOARD_HEIGHT - 1));
+int GetWinner(GAME_STATE s) {
+	if ((s & TopRowMask) == 0) return 1;
+	if ((s & BottomRowMask) == BottomRowMask) return 2;
+	return 0;
+}
 
 float lerp(float a, float b, float x) {
 	return a * (1 - x) + b * x;
@@ -168,9 +175,9 @@ void SDLmain(int argc, char** argv)
 
 	bool running = true;
 	SDL_Event ev;
-
-	GAME_STATE displayState = 0000000777777LL;
-	const float endSwapAnimation = (float)(SQUARE_SIZE * 2 - 1) / (SQUARE_SIZE * 2);
+	const GAME_STATE startState = 0000000777777LL;
+	GAME_STATE displayState = startState;
+	const float endSwapAnimation = (SQUARE_SIZE * 1.5f - 1) / (SQUARE_SIZE * 1.5f);
 	float swapAnimation = 0;
 	float swapAnim2 = 0;
 	bool swapping = false;
@@ -178,10 +185,10 @@ void SDLmain(int argc, char** argv)
 	int swapPos = 0;
 	int mouseX = 0, mouseY = 0;
 	bool mouseClicked;
+	int winner = 0; // No winner = 0, Black = 1, White = 2
 	GAME_STATE finalState = displayState;
 	unordered_set<GAME_STATE> seenStates;
 	seenStates.insert(displayState);
-
 	while (running) {
 		mouseClicked = false;
 		while (SDL_PollEvent(&ev)) {
@@ -237,8 +244,9 @@ void SDLmain(int argc, char** argv)
 				swapAnim2 = 0.0f;
 				displayState = finalState;
 				seenStates.insert(displayState);
+				winner = GetWinner(displayState);
 			}
-		} else {
+		} else if (winner == 0) {
 			if (GetMoveFromPos(mouseX, mouseY, swapPos, vertical)) {
 				dest = vertical ? Rect_Highlight_1V : Rect_Highlight_1H;
 				GetScreenPos(swapPos, dest.x, dest.y);
@@ -257,6 +265,8 @@ void SDLmain(int argc, char** argv)
 					swapping = true;
 				}
 			}
+		} else {
+
 		}
 		SDL_RenderPresent(renderer);
 	}
