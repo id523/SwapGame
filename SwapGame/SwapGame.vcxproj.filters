@@ -30,6 +30,9 @@
     <ClCompile Include="TTFi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="NineSlice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SDLError.h">
@@ -42,6 +45,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TTFi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NineSlice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

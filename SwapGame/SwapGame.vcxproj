@@ -138,12 +138,14 @@
     <ClCompile Include="EntryPoint.cpp" />
     <ClCompile Include="SDLi.cpp" />
     <ClCompile Include="SDLError.cpp" />
+    <ClCompile Include="NineSlice.cpp" />
     <ClCompile Include="TTFi.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="IMGi.h" />
     <ClInclude Include="SDLi.h" />
     <ClInclude Include="SDLError.h" />
+    <ClInclude Include="NineSlice.h" />
     <ClInclude Include="TTFi.h" />
   </ItemGroup>
   <ItemGroup>
