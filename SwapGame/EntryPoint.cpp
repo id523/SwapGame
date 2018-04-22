@@ -7,11 +7,12 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
-
 #include "SDLError.h"
 #include "SDLi.h"
 #include "IMGi.h"
 #include "TTFi.h"
+
+#include "NineSlice.h"
 
 // "Conversion, possible loss of data"
 #pragma warning(disable: 4244)
@@ -173,6 +174,8 @@ void SDLmain(int argc, char** argv)
 	Rect_Highlight_0V.y = 0;
 	Rect_Highlight_0V.w = 80;
 	Rect_Highlight_0V.h = 160;
+	// Nine-slice textures
+
 	// SDL event-loop variables
 	bool running = true;
 	SDL_Event ev;
@@ -245,7 +248,6 @@ void SDLmain(int argc, char** argv)
 				(displayState & STATE_BIT(i)) ? &Rect_White : &Rect_Black,
 				&dest);
 		}
-
 		// Draw UI elements on the screen
 
 		// Handle game mechanics
@@ -271,18 +273,9 @@ void SDLmain(int argc, char** argv)
 				// Work out what state the swap will result in, and whether it is legal
 				finalState = PerformSwap(displayState, swapPos, vertical);
 				bool legalMove = !seenStates.count(finalState);
+
 				// Draw the highlight in the correct colour, corresponding to the legality of the move
-				dest = vertical ? Rect_Highlight_1V : Rect_Highlight_1H;
-				GetScreenPos(swapPos, dest.x, dest.y);
-				SDL_Rect *highlightV, *highlightH;
-				if (legalMove) {
-					highlightV = &Rect_Highlight_1V;
-					highlightH = &Rect_Highlight_1H;
-				} else {
-					highlightV = &Rect_Highlight_0V;
-					highlightH = &Rect_Highlight_0H;
-				}
-				SDL_RenderCopy(renderer, tex, vertical ? highlightV : highlightH, &dest);
+				
 				if (mouseClicked && legalMove) {
 					// If the user clicked the mouse, begin carrying out the move
 					swapping = true;

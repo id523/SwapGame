@@ -1,7 +1,5 @@
 #include "NineSlice.h"
 
-
-
 NineSlice::NineSlice() : Texture(nullptr) {}
 
 NineSlice::NineSlice(SDL_Texture* tex, int bX, int bY,
