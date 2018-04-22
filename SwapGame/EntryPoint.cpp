@@ -119,6 +119,7 @@ float lerp(float a, float b, float x) {
 
 void SDLmain(int argc, char** argv)
 {
+	// Boilerplate: Create window and renderer
 	SDL_Window* window = SDL_CreateWindow("Swap Game",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		800, 480, 0);
@@ -128,7 +129,7 @@ void SDLmain(int argc, char** argv)
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RendererFlags::SDL_RENDERER_PRESENTVSYNC);
 	if (!renderer) throw SDLError("SDL_CreateRenderer");
 	unique_ptr<SDL_Renderer, SDL_Renderer_Deleter> renderer_P(renderer);
-
+	// Load texture from texture file
 	SDL_Surface* imgsurf = IMG_Load("SwapGameTex.png");
 	if (!imgsurf) throw SDLError("IMG_Load");
 	unique_ptr<SDL_Surface, SDL_Surface_Deleter> imgsurf_P(imgsurf);
@@ -172,9 +173,10 @@ void SDLmain(int argc, char** argv)
 	Rect_Highlight_0V.y = 0;
 	Rect_Highlight_0V.w = 80;
 	Rect_Highlight_0V.h = 160;
-
+	// SDL event-loop variables
 	bool running = true;
 	SDL_Event ev;
+	// Game variables
 	const GAME_STATE startState = 0000000777777LL;
 	GAME_STATE displayState = startState;
 	const float endSwapAnimation = (SQUARE_SIZE * 1.5f - 1) / (SQUARE_SIZE * 1.5f);
@@ -189,7 +191,9 @@ void SDLmain(int argc, char** argv)
 	GAME_STATE finalState = displayState;
 	unordered_set<GAME_STATE> seenStates;
 	seenStates.insert(displayState);
+	// Main loop
 	while (running) {
+		// Handle events
 		mouseClicked = false;
 		while (SDL_PollEvent(&ev)) {
 			switch (ev.type) {
@@ -209,6 +213,7 @@ void SDLmain(int argc, char** argv)
 				break;
 			}
 		}
+		// Draw board on screen
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 		SDL_Rect dest = Rect_Board;
@@ -216,12 +221,15 @@ void SDLmain(int argc, char** argv)
 		dest.y = START_Y;
 		SDL_RenderCopy(renderer, tex, &Rect_Board, &dest);
 
+		// Draw pieces on screen
 		dest = Rect_Black;
 		int x1, y1, x2, y2;
 		int swapPos2 = swapPos + (vertical ? BOARD_WIDTH : 1);
+		// Compute destination positions for pieces being swapped
 		GetScreenPos(swapPos, x1, y1);
 		GetScreenPos(swapPos2, x2, y2);
 		for (int i = 0; i < BOARD_CELLS; i++) {
+			// If the piece is being swapped, compute its screen position with interpolation
 			if (i == swapPos) {
 				dest.x = (int)(0.5f + lerp(x1, x2, swapAnimation));
 				dest.y = (int)(0.5f + lerp(y1, y2, swapAnimation));
@@ -229,29 +237,43 @@ void SDLmain(int argc, char** argv)
 				dest.x = (int)(0.5f + lerp(x2, x1, swapAnimation));
 				dest.y = (int)(0.5f + lerp(y2, y1, swapAnimation));
 			} else {
+				// Otherwise compute it directly
 				GetScreenPos(i, dest.x, dest.y);
 			}
+			// Draw the piece
 			SDL_RenderCopy(renderer, tex,
 				(displayState & STATE_BIT(i)) ? &Rect_White : &Rect_Black,
 				&dest);
 		}
+
+		// Draw UI elements on the screen
+
+		// Handle game mechanics
 		if (swapping) {
+			// If a swap is in progress, update the animation
 			swapAnim2 = lerp(swapAnim2, 1, ANIM_SPEED);
 			swapAnimation = lerp(swapAnimation, swapAnim2, ANIM_SPEED);
 			if (swapAnimation > endSwapAnimation) {
+				// If the animation is finished, reset all of the swap-display variables
 				swapping = false;
 				swapAnimation = 0.0f;
 				swapAnim2 = 0.0f;
+				// Compute the new state of the board
 				displayState = finalState;
 				seenStates.insert(displayState);
+				// Check if either side has won
 				winner = GetWinner(displayState);
 			}
 		} else if (winner == 0) {
+			// If a game is in progress,
+			// compute the swap corresponding to the current position of the mouse
 			if (GetMoveFromPos(mouseX, mouseY, swapPos, vertical)) {
-				dest = vertical ? Rect_Highlight_1V : Rect_Highlight_1H;
-				GetScreenPos(swapPos, dest.x, dest.y);
+				// Work out what state the swap will result in, and whether it is legal
 				finalState = PerformSwap(displayState, swapPos, vertical);
 				bool legalMove = !seenStates.count(finalState);
+				// Draw the highlight in the correct colour, corresponding to the legality of the move
+				dest = vertical ? Rect_Highlight_1V : Rect_Highlight_1H;
+				GetScreenPos(swapPos, dest.x, dest.y);
 				SDL_Rect *highlightV, *highlightH;
 				if (legalMove) {
 					highlightV = &Rect_Highlight_1V;
@@ -262,12 +284,14 @@ void SDLmain(int argc, char** argv)
 				}
 				SDL_RenderCopy(renderer, tex, vertical ? highlightV : highlightH, &dest);
 				if (mouseClicked && legalMove) {
+					// If the user clicked the mouse, begin carrying out the move
 					swapping = true;
 				}
 			}
 		} else {
-
+			// If there has been a winner
 		}
+		// Update the screen
 		SDL_RenderPresent(renderer);
 	}
 }
