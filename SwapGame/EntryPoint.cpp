@@ -2,6 +2,7 @@
 #include <memory>
 #include <cmath>
 #include <cstdint>
+#include <unordered_map>
 #include <unordered_set>
 
 #include <SDL.h>
@@ -42,7 +43,7 @@ float lerp(float a, float b, float x) {
 	return a * (1 - x) + b * x;
 }
 
-SAFEPTR(SDL_Texture) RenderFontTexture(
+SAFEPTR(SDL_Texture) StringTexture(
 	SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color c, SDL_Rect* bounds = nullptr) {
 	SDL_Surface* text_surf = TTF_RenderText_Blended(font, text, c);
 	if (!text_surf) throw SDLError("TTF_RenderText_Blended", TTF_GetError);
@@ -56,6 +57,24 @@ SAFEPTR(SDL_Texture) RenderFontTexture(
 	SDL_Texture* text_tex = SDL_CreateTextureFromSurface(renderer, text_surf);
 	if (!text_tex) throw SDLError("SDL_CreateTextureFromSurface");
 	return move(SAFEPTR(SDL_Texture)(text_tex));
+}
+
+SDL_Renderer* textRenderer;
+TTF_Font* textFont;
+SDL_Color textColor;
+unordered_map<string, SDL_Rect> stringBounds;
+unordered_map<string, SAFEPTR(SDL_Texture)> stringTextures;
+void RenderText(const string& s, SDL_Rect* bounds = nullptr, SDL_Texture** tex = nullptr) {
+	if (!stringBounds.count(s)) {
+#ifdef _DEBUG
+		cout << "Rendering text: '" << s.c_str() << "'" << endl;
+#endif
+		SDL_Rect newBounds;
+		stringTextures.emplace(s, StringTexture(textRenderer, textFont, s.c_str(), textColor, &newBounds));
+		stringBounds.emplace(s, newBounds);
+	}
+	if (bounds) *bounds = stringBounds[s];
+	if (tex) *tex = stringTextures[s].get();
 }
 
 void SDLmain(int argc, char** argv)
@@ -80,18 +99,17 @@ void SDLmain(int argc, char** argv)
 	imgsurf_P.release();
 
 	// Load font
-	TTF_Font* font = TTF_OpenFont("OpenSans_Bold.ttf", 18);
+	TTF_Font* font = TTF_OpenFont("OpenSans_Bold.ttf", 20);
 	if (!font) throw SDLError("TTF_OpenFont", TTF_GetError);
 	MAKESAFE(TTF_Font, font);
 
 	// Declare colors
 	MAKE_COLOR(Color_White, 255, 255, 255, SDL_ALPHA_OPAQUE);
 
-	// Render texts
-	SDL_Rect text_White_Bounds;
-	SAFEPTR(SDL_Texture) text_White = RenderFontTexture(renderer, font, "White", Color_White, &text_White_Bounds);
-	SDL_Rect text_Black_Bounds;
-	SAFEPTR(SDL_Texture) text_Black = RenderFontTexture(renderer, font, "Black", Color_White, &text_Black_Bounds);
+	// Initialize text rendering
+	textRenderer = renderer;
+	textFont = font;
+	textColor = Color_White;
 
 	// Texture-map coordinates
 	MAKE_RECT(Rect_Black, 0, 0, 80, 80);
@@ -144,7 +162,7 @@ void SDLmain(int argc, char** argv)
 			}
 		}
 		// Draw board on screen
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+		SDL_SetRenderDrawColor(renderer, 48, 16, 0, 255);
 		SDL_RenderClear(renderer);
 		SDL_Rect dest = Rect_Board;
 		dest.x = START_X;
@@ -222,11 +240,22 @@ void SDLmain(int argc, char** argv)
 			// If there has been a winner
 		}
 
-		// Draw UI elements on the screen
-		SDL_Texture* renderText = currentPlayer == PLAYER_BLACK ? text_Black.get() : text_White.get();
-		const SDL_Rect* renderBounds = currentPlayer == PLAYER_BLACK ? &text_Black_Bounds : &text_White_Bounds;
-		dest = *renderBounds;
-		SDL_RenderCopy(renderer, renderText, renderBounds, &dest);
+		// Write status text
+		SDL_Texture* renderText;
+		SDL_Rect renderBounds;
+		if (winner == PLAYER_BLACK) {
+			RenderText("Black wins!", &renderBounds, &renderText);
+		} else if (winner == PLAYER_WHITE) {
+			RenderText("White wins!", &renderBounds, &renderText);
+		} else if (currentPlayer == PLAYER_BLACK) {
+			RenderText("Black's turn to move.", &renderBounds, &renderText);
+		} else {
+			RenderText("White's turn to move.", &renderBounds, &renderText);
+		}
+		dest = renderBounds;
+		dest.x = 490;
+		dest.y = 10;
+		SDL_RenderCopy(renderer, renderText, &renderBounds, &dest);
 
 		// Update the screen
 		SDL_RenderPresent(renderer);
