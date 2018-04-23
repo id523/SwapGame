@@ -6,6 +6,7 @@
 
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 
 #include "SDLError.h"
 #include "SDLi.h"
@@ -29,6 +30,10 @@ using namespace std;
 #define START_X 160
 #define START_Y 0
 #define ANIM_SPEED 0.35f
+#define HIGHLIGHT_MARGIN 10
+
+#define PLAYER_BLACK 1
+#define PLAYER_WHITE 2
 
 #define DELETER_CLASS(c, d) \
 struct c##_Deleter { void operator()(c* r) { if (r) d(r); } }
@@ -109,8 +114,8 @@ bool GetMoveFromPos(int mx, int my, int& swapPos, bool& vertical) {
 const GAME_STATE TopRowMask = (1LL << BOARD_WIDTH) - 1;
 const GAME_STATE BottomRowMask = TopRowMask << (BOARD_WIDTH * (BOARD_HEIGHT - 1));
 int GetWinner(GAME_STATE s) {
-	if ((s & TopRowMask) == 0) return 1;
-	if ((s & BottomRowMask) == BottomRowMask) return 2;
+	if ((s & TopRowMask) == 0) return PLAYER_BLACK;
+	if ((s & BottomRowMask) == BottomRowMask) return PLAYER_WHITE;
 	return 0;
 }
 
@@ -126,10 +131,10 @@ void SDLmain(int argc, char** argv)
 		800, 480, 0);
 	if (!window) throw SDLError("SDL_CreateWindow");
 	unique_ptr<SDL_Window, SDL_Window_Deleter> window_P(window);
-
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RendererFlags::SDL_RENDERER_PRESENTVSYNC);
 	if (!renderer) throw SDLError("SDL_CreateRenderer");
 	unique_ptr<SDL_Renderer, SDL_Renderer_Deleter> renderer_P(renderer);
+
 	// Load texture from texture file
 	SDL_Surface* imgsurf = IMG_Load("SwapGameTex.png");
 	if (!imgsurf) throw SDLError("IMG_Load");
@@ -156,13 +161,14 @@ void SDLmain(int argc, char** argv)
 	Rect_Board.h = 480;
 
 	// Nine-slice textures
-
+	unique_ptr<NineSlice> HighlightIllegal = make_unique<NineSlice>(tex, 160, 0, 15, 25, 40, 15, 25, 40);
+	unique_ptr<NineSlice> HighlightLegal = make_unique<NineSlice>(tex, 200, 0, 15, 25, 40, 15, 25, 40);
 
 	// SDL event-loop variables
 	bool running = true;
 	SDL_Event ev;
 	// Game variables
-	const GAME_STATE startState = 0000000777777LL;
+	const GAME_STATE startState = (1LL << (BOARD_HEIGHT / 2 * BOARD_WIDTH)) - 1;
 	GAME_STATE displayState = startState;
 	const float endSwapAnimation = (SQUARE_SIZE * 1.5f - 1) / (SQUARE_SIZE * 1.5f);
 	float swapAnimation = 0;
@@ -172,7 +178,8 @@ void SDLmain(int argc, char** argv)
 	int swapPos = 0;
 	int mouseX = 0, mouseY = 0;
 	bool mouseClicked;
-	int winner = 0; // No winner = 0, Black = 1, White = 2
+	int currentPlayer = PLAYER_WHITE;
+	int winner = 0;
 	GAME_STATE finalState = displayState;
 	unordered_set<GAME_STATE> seenStates;
 	seenStates.insert(displayState);
@@ -230,7 +237,6 @@ void SDLmain(int argc, char** argv)
 				(displayState & STATE_BIT(i)) ? &Rect_White : &Rect_Black,
 				&dest);
 		}
-		// Draw UI elements on the screen
 
 		// Handle game mechanics
 		if (swapping) {
@@ -247,6 +253,8 @@ void SDLmain(int argc, char** argv)
 				seenStates.insert(displayState);
 				// Check if either side has won
 				winner = GetWinner(displayState);
+				// Set next player
+				currentPlayer = (currentPlayer == PLAYER_WHITE) ? PLAYER_BLACK : PLAYER_WHITE;
 			}
 		} else if (winner == 0) {
 			// If a game is in progress,
@@ -257,7 +265,16 @@ void SDLmain(int argc, char** argv)
 				bool legalMove = !seenStates.count(finalState);
 
 				// Draw the highlight in the correct colour, corresponding to the legality of the move
-				
+				NineSlice* Highlight = legalMove ? HighlightLegal.get() : HighlightIllegal.get();
+				int hX, hY;
+				const int shortSize = SQUARE_SIZE - 2 * HIGHLIGHT_MARGIN;
+				const int longSize = 2 * (SQUARE_SIZE - HIGHLIGHT_MARGIN);
+				GetScreenPos(swapPos, hX, hY);
+				Highlight->RenderRect(renderer,
+					hX + HIGHLIGHT_MARGIN, hY + HIGHLIGHT_MARGIN,
+					vertical ? shortSize : longSize,
+					vertical ? longSize : shortSize);
+
 				if (mouseClicked && legalMove) {
 					// If the user clicked the mouse, begin carrying out the move
 					swapping = true;
@@ -266,6 +283,10 @@ void SDLmain(int argc, char** argv)
 		} else {
 			// If there has been a winner
 		}
+
+		// Draw UI elements on the screen
+		
+
 		// Update the screen
 		SDL_RenderPresent(renderer);
 	}
