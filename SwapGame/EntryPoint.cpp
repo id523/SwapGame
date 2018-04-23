@@ -27,13 +27,13 @@ using namespace std;
 #define MAKE_RECT(VAR, X, Y, W, H) SDL_Rect VAR; VAR.x = X; VAR.y = Y; VAR.w = W; VAR.h = H
 #define MAKE_COLOR(VAR, R, G, B, A) SDL_Color VAR; VAR.r = R; VAR.g = G; VAR.b = B; VAR.a = A
 
-#define DELETER_CLASS(c, d) struct c##_Deleter { void operator()(c* r) { if (r) d(r); } }
+#define DECLARE_DELETER(c, d) struct c##_Deleter { void operator()(c* r) { if (r) d(r); } }
 
-DELETER_CLASS(SDL_Renderer, SDL_DestroyRenderer);
-DELETER_CLASS(SDL_Window, SDL_DestroyWindow);
-DELETER_CLASS(SDL_Surface, SDL_FreeSurface);
-DELETER_CLASS(SDL_Texture, SDL_DestroyTexture);
-DELETER_CLASS(TTF_Font, TTF_CloseFont);
+DECLARE_DELETER(SDL_Renderer, SDL_DestroyRenderer);
+DECLARE_DELETER(SDL_Window, SDL_DestroyWindow);
+DECLARE_DELETER(SDL_Surface, SDL_FreeSurface);
+DECLARE_DELETER(SDL_Texture, SDL_DestroyTexture);
+DECLARE_DELETER(TTF_Font, TTF_CloseFont);
 
 #define SAFEPTR(x) unique_ptr<x, x##_Deleter>
 #define MAKESAFE(t, v) unique_ptr<t, t##_Deleter> v##_P(v)
