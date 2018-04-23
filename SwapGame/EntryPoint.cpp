@@ -14,6 +14,7 @@
 #include "IMGi.h"
 #include "TTFi.h"
 
+#include "AI.h"
 #include "GameStates.h"
 #include "MinMax.h"
 #include "NineSlice.h"
@@ -279,8 +280,7 @@ void SDLmain(int argc, char** argv)
 				} else {
 					// The AI is ready to move
 					// TODO: Set swapPos and vertical to the AI's move
-					swapPos = 2 * BOARD_WIDTH;
-					vertical = true;
+					AI::ComputeMove(displayState, seenStates, currentPlayer, swapPos, vertical);
 					finalState = PerformSwap(displayState, swapPos, vertical);
 					swapping = true;
 				}

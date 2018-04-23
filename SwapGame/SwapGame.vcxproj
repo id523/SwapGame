@@ -134,6 +134,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AI.cpp" />
     <ClCompile Include="IMGi.cpp" />
     <ClCompile Include="EntryPoint.cpp" />
     <ClCompile Include="SDLi.cpp" />
@@ -142,6 +143,7 @@
     <ClCompile Include="TTFi.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AI.h" />
     <ClInclude Include="GameStates.h" />
     <ClInclude Include="IMGi.h" />
     <ClInclude Include="MinMax.h" />
