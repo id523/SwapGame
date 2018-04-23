@@ -3,11 +3,13 @@
 
 using namespace std;
 
+#define DEPTH 3
+
 namespace AI {
 	int Heuristic(Player p, GameState s) {
 		Player w = GetWinner(s);
 		if (w != PLAYER_NONE) {
-			return p == w ? 2 * BOARD_WIDTH : -2 * BOARD_WIDTH;
+			return p == w ? 5 * BOARD_WIDTH : -5 * BOARD_WIDTH;
 		}
 		int result = 0;
 		for (int i = 0; i < BOARD_WIDTH; i++) {
@@ -99,7 +101,7 @@ namespace AI {
 		rootMove->illegalStates = &seenStates;
 		rootMove->previous = nullptr;
 		rootMove->result = currentState;
-		Negamax(*rootMove, 3, -INT_MAX, INT_MAX, player, swapPos, vertical);
+		Negamax(*rootMove, DEPTH, -INT_MAX, INT_MAX, player, swapPos, vertical);
 		delete rootMove;
 	}
 }
