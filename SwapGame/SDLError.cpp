@@ -9,7 +9,7 @@ SDLError::SDLError()
 	std::string s;
 	s += "SDL Error: ";
 	s += SDL_GetError();
-	msg = _strdup(s.c_str());
+	msg = strdup(s.c_str());
 }
 
 SDLError::SDLError(const char* func)
@@ -19,12 +19,13 @@ SDLError::SDLError(const char* func)
 	s += func;
 	s += ": ";
 	s += SDL_GetError();
-	msg = _strdup(s.c_str());
+	msg = strdup(s.c_str());
 }
 
 
 SDLError::~SDLError()
 {
+	free((void*)msg);
 }
 
 const char* SDLError::what() const
