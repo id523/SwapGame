@@ -2,26 +2,31 @@
 #include <SDL.h>
 #include <string>
 
-
-
-SDLError::SDLError()
-{
-	std::string s;
-	s += "SDL Error: ";
-	s += SDL_GetError();
-	msg = strdup(s.c_str());
+SDLError::SDLError() : SDLError((ErrorFunction)nullptr) {
 }
 
-SDLError::SDLError(const char* func)
+SDLError::SDLError(ErrorFunction ef)
 {
+	if (!ef) ef = SDL_GetError;
+	std::string s;
+	s += "SDL Error: ";
+	s += ef();
+	msg = _strdup(s.c_str());
+}
+
+SDLError::SDLError(const char * func) : SDLError(func, nullptr) {
+}
+
+SDLError::SDLError(const char* func, ErrorFunction ef)
+{
+	if (!ef) ef = SDL_GetError;
 	std::string s;
 	s += "SDL Error in ";
 	s += func;
 	s += ": ";
-	s += SDL_GetError();
-	msg = strdup(s.c_str());
+	s += ef();
+	msg = _strdup(s.c_str());
 }
-
 
 SDLError::~SDLError()
 {
