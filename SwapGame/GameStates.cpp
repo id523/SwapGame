@@ -69,8 +69,8 @@ bool GetMoveFromPos(int mx, int my, int & swapPos, bool & vertical) {
 	}
 }
 
-int GetWinner(GameState s) {
+Player GetWinner(GameState s) {
 	if ((s & TopRowMask) == 0) return PLAYER_BLACK;
 	if ((s & BottomRowMask) == BottomRowMask) return PLAYER_WHITE;
-	return 0;
+	return PLAYER_NONE;
 }

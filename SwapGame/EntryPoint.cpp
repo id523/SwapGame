@@ -164,8 +164,8 @@ void SDLmain(int argc, char** argv)
 	int swapPos = 0;
 	int mouseX = 0, mouseY = 0;
 	bool mouseClicked;
-	int currentPlayer = PLAYER_WHITE;
-	int winner = 0;
+	Player currentPlayer = PLAYER_WHITE;
+	Player winner = PLAYER_NONE;
 	GameState finalState = displayState;
 	unordered_set<GameState> seenStates;
 	seenStates.insert(displayState);
@@ -373,7 +373,7 @@ void SDLmain(int argc, char** argv)
 			RoundedFGRidge->RenderRect(renderer, &dest);
 			CenterText(renderer, dest, "Restart Game");
 			if (mouseClicked && mouseHover) {
-				winner = 0;
+				winner = PLAYER_NONE;
 				displayState = startState;
 				currentPlayer = PLAYER_WHITE;
 				seenStates.clear();

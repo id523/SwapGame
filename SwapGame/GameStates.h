@@ -19,4 +19,4 @@ const GameState BottomRowMask = TopRowMask << (BOARD_WIDTH * (BOARD_HEIGHT - 1))
 GameState PerformSwap(GameState s, int sp1, bool vertical);
 void GetScreenPos(int pos, int& x, int& y);
 bool GetMoveFromPos(int mx, int my, int& swapPos, bool& vertical);
-int GetWinner(GameState s);
+Player GetWinner(GameState s);

@@ -7,7 +7,7 @@ namespace AI {
 	void ComputeMove(
 		GameState currentState,
 		const std::unordered_set<GameState>& seenStates,
-		int player,
+		Player player,
 		int& swapPos,
 		bool& vertical);
 }
