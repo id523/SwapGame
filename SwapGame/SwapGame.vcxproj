@@ -142,6 +142,7 @@
     <ClCompile Include="TTFi.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GameStates.h" />
     <ClInclude Include="IMGi.h" />
     <ClInclude Include="SDLi.h" />
     <ClInclude Include="SDLError.h" />
