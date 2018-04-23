@@ -245,7 +245,7 @@ void SDLmain(int argc, char** argv)
 				// Check if either side has won
 				winner = GetWinner(displayState);
 				// Set next player
-				currentPlayer = (currentPlayer == PLAYER_WHITE) ? PLAYER_BLACK : PLAYER_WHITE;
+				currentPlayer = OtherPlayer(currentPlayer);
 			}
 		} else if (winner == 0) {
 			// If a game is in progress, and the current player is human,

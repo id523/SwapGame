@@ -74,3 +74,11 @@ Player GetWinner(GameState s) {
 	if ((s & BottomRowMask) == BottomRowMask) return PLAYER_WHITE;
 	return PLAYER_NONE;
 }
+
+Player OtherPlayer(Player p) {
+	switch (p) {
+	case PLAYER_BLACK: return PLAYER_WHITE;
+	case PLAYER_WHITE: return PLAYER_BLACK;
+	default: return PLAYER_NONE;
+	}
+}

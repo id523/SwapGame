@@ -20,3 +20,4 @@ GameState PerformSwap(GameState s, int sp1, bool vertical);
 void GetScreenPos(int pos, int& x, int& y);
 bool GetMoveFromPos(int mx, int my, int& swapPos, bool& vertical);
 Player GetWinner(GameState s);
+Player OtherPlayer(Player p);
