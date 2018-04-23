@@ -8,7 +8,7 @@ typedef long long GameState;
 #define BOARD_HEIGHT 6
 #define BOARD_CELLS (BOARD_WIDTH * BOARD_HEIGHT)
 #define SQUARE_SIZE 80
-#define START_X 160
+#define START_X 0
 #define START_Y 0
 
 #define PLAYER_BLACK 1
