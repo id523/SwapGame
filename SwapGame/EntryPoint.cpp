@@ -106,8 +106,8 @@ void SDLmain(int argc, char** argv)
 	bool running = true;
 	SDL_Event ev;
 	// Game variables
-	const GAME_STATE startState = (1LL << (BOARD_HEIGHT / 2 * BOARD_WIDTH)) - 1;
-	GAME_STATE displayState = startState;
+	const GameState startState = (1LL << (BOARD_HEIGHT / 2 * BOARD_WIDTH)) - 1;
+	GameState displayState = startState;
 	const float endSwapAnimation = (SQUARE_SIZE * 1.5f - 1) / (SQUARE_SIZE * 1.5f);
 	float swapAnimation = 0;
 	float swapAnim2 = 0;
@@ -118,8 +118,8 @@ void SDLmain(int argc, char** argv)
 	bool mouseClicked;
 	int currentPlayer = PLAYER_WHITE;
 	int winner = 0;
-	GAME_STATE finalState = displayState;
-	unordered_set<GAME_STATE> seenStates;
+	GameState finalState = displayState;
+	unordered_set<GameState> seenStates;
 	seenStates.insert(displayState);
 	// Main loop
 	while (running) {

@@ -1,5 +1,8 @@
-#define GAME_STATE long long
-#define STATE_BIT(n) (1LL << n)
+#pragma once
+
+typedef long long GameState;
+
+#define STATE_BIT(n) ((GameState)1 << n)
 
 #define BOARD_WIDTH 6
 #define BOARD_HEIGHT 6
@@ -11,7 +14,7 @@
 #define PLAYER_BLACK 1
 #define PLAYER_WHITE 2
 
-GAME_STATE PerformSwap(GAME_STATE s, int sp1, bool vertical) {
+GameState PerformSwap(GameState s, int sp1, bool vertical) {
 	int sp2 = sp1 + (vertical ? BOARD_WIDTH : 1);
 	bool bit1 = !!(s & STATE_BIT(sp1));
 	bool bit2 = !!(s & STATE_BIT(sp2));
@@ -79,9 +82,10 @@ bool GetMoveFromPos(int mx, int my, int& swapPos, bool& vertical) {
 		}
 	}
 }
-const GAME_STATE TopRowMask = (1LL << BOARD_WIDTH) - 1;
-const GAME_STATE BottomRowMask = TopRowMask << (BOARD_WIDTH * (BOARD_HEIGHT - 1));
-int GetWinner(GAME_STATE s) {
+const GameState TopRowMask = STATE_BIT(BOARD_WIDTH) - 1;
+const GameState BottomRowMask = TopRowMask << (BOARD_WIDTH * (BOARD_HEIGHT - 1));
+
+int GetWinner(GameState s) {
 	if ((s & TopRowMask) == 0) return PLAYER_BLACK;
 	if ((s & BottomRowMask) == BottomRowMask) return PLAYER_WHITE;
 	return 0;
