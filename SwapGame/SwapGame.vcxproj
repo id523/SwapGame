@@ -144,6 +144,7 @@
   <ItemGroup>
     <ClInclude Include="GameStates.h" />
     <ClInclude Include="IMGi.h" />
+    <ClInclude Include="MinMax.h" />
     <ClInclude Include="SDLi.h" />
     <ClInclude Include="SDLError.h" />
     <ClInclude Include="NineSlice.h" />

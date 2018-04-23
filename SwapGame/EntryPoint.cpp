@@ -15,6 +15,7 @@
 #include "TTFi.h"
 
 #include "GameStates.h"
+#include "MinMax.h"
 #include "NineSlice.h"
 
 // "Conversion, possible loss of data"
@@ -23,6 +24,7 @@
 using namespace std;
 
 #define ANIM_SPEED 0.35f
+#define CPU_DELAY 10
 #define HIGHLIGHT_MARGIN 10
 
 #define MAKE_RECT(VAR, X, Y, W, H) SDL_Rect VAR; VAR.x = X; VAR.y = Y; VAR.w = W; VAR.h = H
@@ -77,6 +79,29 @@ void RenderText(const string& s, SDL_Rect* bounds = nullptr, SDL_Texture** tex =
 	if (tex) *tex = stringTextures[s].get();
 }
 
+void CenterText(SDL_Renderer* renderer, SDL_Rect r, const string& text) {
+	SDL_Rect strBounds;
+	SDL_Texture* strTexture;
+	RenderText(text, &strBounds, &strTexture);
+	int ox = (strBounds.w - r.w) / 2;
+	int oy = (strBounds.h - r.h) / 2;
+	if (ox <= 0) {
+		r.w = strBounds.w;
+		r.x -= ox;
+	} else {
+		strBounds.w = r.w;
+		strBounds.x = ox;
+	}
+	if (oy <= 0) {
+		r.h = strBounds.h;
+		r.y -= oy;
+	} else {
+		strBounds.h = r.h;
+		strBounds.y = oy;
+	}
+	SDL_RenderCopy(renderer, strTexture, &strBounds, &r);
+}
+
 void SDLmain(int argc, char** argv)
 {
 	// Boilerplate: Create window and renderer
@@ -117,9 +142,12 @@ void SDLmain(int argc, char** argv)
 	MAKE_RECT(Rect_Board, 0, 80, 480, 480);
 
 	// Nine-slice textures
-	unique_ptr<NineSlice> HighlightIllegal = make_unique<NineSlice>(tex, 160, 0, 15, 25, 40, 15, 25, 40);
-	unique_ptr<NineSlice> HighlightLegal = make_unique<NineSlice>(tex, 200, 0, 15, 25, 40, 15, 25, 40);
-
+	unique_ptr<const NineSlice> HighlightIllegal = make_unique<const NineSlice>(tex, 160, 0, 15, 25, 40, 15, 25, 40);
+	unique_ptr<const NineSlice> HighlightLegal = make_unique<const NineSlice>(tex, 200, 0, 15, 25, 40, 15, 25, 40);
+	unique_ptr<const NineSlice> RoundedBG = make_unique<const NineSlice>(tex, 160, 40, 8, 12, 20, 8, 12, 20);
+	unique_ptr<const NineSlice> RoundedFGRidge = make_unique<const NineSlice>(tex, 180, 40, 8, 12, 20, 8, 12, 20);
+	unique_ptr<const NineSlice> RoundedFGOut = make_unique<const NineSlice>(tex, 200, 40, 8, 12, 20, 8, 12, 20);
+	unique_ptr<const NineSlice> RoundedFGIn = make_unique<const NineSlice>(tex, 220, 40, 8, 12, 20, 8, 12, 20);
 	// SDL event-loop variables
 	bool running = true;
 	SDL_Event ev;
@@ -131,6 +159,7 @@ void SDLmain(int argc, char** argv)
 	float swapAnim2 = 0;
 	bool swapping = false;
 	bool vertical = false;
+	int AITimer = CPU_DELAY;
 	int swapPos = 0;
 	int mouseX = 0, mouseY = 0;
 	bool mouseClicked;
@@ -139,6 +168,10 @@ void SDLmain(int argc, char** argv)
 	GameState finalState = displayState;
 	unordered_set<GameState> seenStates;
 	seenStates.insert(displayState);
+
+	bool whiteIsAI = false;
+	bool blackIsAI = true;
+
 	// Main loop
 	while (running) {
 		// Handle events
@@ -162,7 +195,7 @@ void SDLmain(int argc, char** argv)
 			}
 		}
 		// Draw board on screen
-		SDL_SetRenderDrawColor(renderer, 48, 16, 0, 255);
+		SDL_SetRenderDrawColor(renderer, 64, 64, 64, 255);
 		SDL_RenderClear(renderer);
 		SDL_Rect dest = Rect_Board;
 		dest.x = START_X;
@@ -204,6 +237,7 @@ void SDLmain(int argc, char** argv)
 				swapping = false;
 				swapAnimation = 0.0f;
 				swapAnim2 = 0.0f;
+				AITimer = CPU_DELAY;
 				// Compute the new state of the board
 				displayState = finalState;
 				seenStates.insert(displayState);
@@ -213,26 +247,41 @@ void SDLmain(int argc, char** argv)
 				currentPlayer = (currentPlayer == PLAYER_WHITE) ? PLAYER_BLACK : PLAYER_WHITE;
 			}
 		} else if (winner == 0) {
-			// If a game is in progress,
-			// compute the swap corresponding to the current position of the mouse
-			if (GetMoveFromPos(mouseX, mouseY, swapPos, vertical)) {
-				// Work out what state the swap will result in, and whether it is legal
-				finalState = PerformSwap(displayState, swapPos, vertical);
-				bool legalMove = !seenStates.count(finalState);
+			// If a game is in progress, and the current player is human,
+			if ((currentPlayer == PLAYER_BLACK && !blackIsAI) || (currentPlayer == PLAYER_WHITE && !whiteIsAI)) {
+				// compute the swap corresponding to the current position of the mouse
+				if (GetMoveFromPos(mouseX, mouseY, swapPos, vertical)) {
+					// Work out what state the swap will result in, and whether it is legal
+					finalState = PerformSwap(displayState, swapPos, vertical);
+					bool legalMove = !seenStates.count(finalState);
 
-				// Draw the highlight in the correct colour, corresponding to the legality of the move
-				NineSlice* Highlight = legalMove ? HighlightLegal.get() : HighlightIllegal.get();
-				int hX, hY;
-				const int shortSize = SQUARE_SIZE - 2 * HIGHLIGHT_MARGIN;
-				const int longSize = 2 * (SQUARE_SIZE - HIGHLIGHT_MARGIN);
-				GetScreenPos(swapPos, hX, hY);
-				Highlight->RenderRect(renderer,
-					hX + HIGHLIGHT_MARGIN, hY + HIGHLIGHT_MARGIN,
-					vertical ? shortSize : longSize,
-					vertical ? longSize : shortSize);
+					// Draw the highlight in the correct colour, corresponding to the legality of the move
+					const NineSlice* Highlight = legalMove ? HighlightLegal.get() : HighlightIllegal.get();
+					int hX, hY;
+					const int shortSize = SQUARE_SIZE - 2 * HIGHLIGHT_MARGIN;
+					const int longSize = 2 * (SQUARE_SIZE - HIGHLIGHT_MARGIN);
+					GetScreenPos(swapPos, hX, hY);
+					Highlight->RenderRect(renderer,
+						hX + HIGHLIGHT_MARGIN, hY + HIGHLIGHT_MARGIN,
+						vertical ? shortSize : longSize,
+						vertical ? longSize : shortSize);
 
-				if (mouseClicked && legalMove) {
-					// If the user clicked the mouse, begin carrying out the move
+					if (mouseClicked && legalMove) {
+						// If the user clicked the mouse, begin carrying out the move
+						swapping = true;
+					}
+				}
+			} else {
+				// A game is in progress and the current player is an AI
+				if (AITimer > 0) {
+					// The AI is waiting to move
+					AITimer -= 1;
+				} else {
+					// The AI is ready to move
+					// TODO: Set swapPos and vertical to the AI's move
+					swapPos = 2 * BOARD_WIDTH;
+					vertical = true;
+					finalState = PerformSwap(displayState, swapPos, vertical);
 					swapping = true;
 				}
 			}
@@ -241,21 +290,96 @@ void SDLmain(int argc, char** argv)
 		}
 
 		// Write status text
-		SDL_Texture* renderText;
-		SDL_Rect renderBounds;
+		const char* statusText = nullptr;
 		if (winner == PLAYER_BLACK) {
-			RenderText("Black wins!", &renderBounds, &renderText);
+			statusText = "Black wins!";
 		} else if (winner == PLAYER_WHITE) {
-			RenderText("White wins!", &renderBounds, &renderText);
+			statusText = "White wins!";
 		} else if (currentPlayer == PLAYER_BLACK) {
-			RenderText("Black's turn to move.", &renderBounds, &renderText);
+			statusText = "Black's turn to move.";
 		} else {
-			RenderText("White's turn to move.", &renderBounds, &renderText);
+			statusText = "White's turn to move.";
 		}
-		dest = renderBounds;
-		dest.x = 490;
+		dest.x = 480;
 		dest.y = 10;
-		SDL_RenderCopy(renderer, renderText, &renderBounds, &dest);
+		dest.w = 320;
+		dest.h = 40;
+		CenterText(renderer, dest, statusText);
+
+		// Show controls for player/CPU
+		SDL_Point mouse;
+		mouse.x = mouseX;
+		mouse.y = mouseY;
+		bool mouseHover = false;
+
+		// Draw selector for white
+		dest.x = 490;
+		dest.y = 70;
+		dest.w = 150;
+		dest.h = 35;
+		CenterText(renderer, dest, "White player:");
+		dest.x = 640;
+		dest.w = 120;
+		mouseHover = !!SDL_PointInRect(&mouse, &dest);
+		if (mouseHover) {
+			SDL_SetTextureColorMod(tex, 0, 48, 128);
+		} else {
+			SDL_SetTextureColorMod(tex, 0, 16, 64);
+		}
+		RoundedBG->RenderRect(renderer, &dest);
+		SDL_SetTextureColorMod(tex, 255, 255, 255);
+		RoundedFGRidge->RenderRect(renderer, &dest);
+		CenterText(renderer, dest, whiteIsAI ? "CPU" : "Manual");
+		if (mouseClicked && mouseHover) {
+			whiteIsAI = !whiteIsAI;
+		}
+
+		// Draw selector for black
+		dest.x = 490;
+		dest.y = 120;
+		dest.w = 150;
+		dest.h = 35;
+		CenterText(renderer, dest, "Black player:");
+		dest.x = 640;
+		dest.w = 120;
+		mouseHover = !!SDL_PointInRect(&mouse, &dest);
+		if (mouseHover) {
+			SDL_SetTextureColorMod(tex, 0, 48, 128);
+		} else {
+			SDL_SetTextureColorMod(tex, 0, 16, 64);
+		}
+		RoundedBG->RenderRect(renderer, &dest);
+		SDL_SetTextureColorMod(tex, 255, 255, 255);
+		RoundedFGRidge->RenderRect(renderer, &dest);
+		CenterText(renderer, dest, blackIsAI ? "CPU" : "Manual");
+		if (mouseClicked && mouseHover) {
+			blackIsAI = !blackIsAI;
+		}
+
+		// Draw restart-game button
+		if (winner) {
+			dest.x = 510;
+			dest.y = 200;
+			dest.w = 260;
+			dest.h = 40;
+			mouseHover = !!SDL_PointInRect(&mouse, &dest);
+			if (mouseHover) {
+				SDL_SetTextureColorMod(tex, 0, 48, 128);
+			} else {
+				SDL_SetTextureColorMod(tex, 0, 16, 64);
+			}
+			RoundedBG->RenderRect(renderer, &dest);
+			SDL_SetTextureColorMod(tex, 255, 255, 255);
+			RoundedFGRidge->RenderRect(renderer, &dest);
+			CenterText(renderer, dest, "Restart Game");
+			if (mouseClicked && mouseHover) {
+				winner = 0;
+				displayState = startState;
+				currentPlayer = PLAYER_WHITE;
+				seenStates.clear();
+				seenStates.insert(startState);
+			}
+		}
 
 		// Update the screen
 		SDL_RenderPresent(renderer);

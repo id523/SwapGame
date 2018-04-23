@@ -1,4 +1,5 @@
 #include "NineSlice.h"
+#include "MinMax.h"
 
 NineSlice::NineSlice() : Texture(nullptr) {}
 
@@ -11,7 +12,7 @@ NineSlice::NineSlice(SDL_Texture* tex, int bX, int bY,
 
 NineSlice::~NineSlice() { }
 
-void NineSlice::RenderRect(SDL_Renderer* r, int x, int y, int w, int h) {
+void NineSlice::RenderRect(SDL_Renderer* r, int x, int y, int w, int h) const {
 	SDL_Rect src, dest;
 	if (w <= 0) return;
 	if (h <= 0) return;
@@ -128,6 +129,6 @@ void NineSlice::RenderRect(SDL_Renderer* r, int x, int y, int w, int h) {
 	SDL_RenderCopy(r, Texture, &src, &dest);
 }
 
-void NineSlice::RenderRect(SDL_Renderer* r, const SDL_Rect* rect) {
+void NineSlice::RenderRect(SDL_Renderer* r, const SDL_Rect* rect) const {
 	RenderRect(r, rect->x, rect->y, rect->w, rect->h);
 }

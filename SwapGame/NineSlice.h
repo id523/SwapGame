@@ -10,13 +10,6 @@ public:
 	NineSlice();
 	NineSlice(SDL_Texture* tex, int bX, int bY, int x1, int x2, int x3, int y1, int y2, int y3);
 	~NineSlice();
-	void RenderRect(SDL_Renderer* r, int x, int y, int w, int h);
-	void RenderRect(SDL_Renderer* r, const SDL_Rect* rect);
+	void RenderRect(SDL_Renderer* r, int x, int y, int w, int h) const;
+	void RenderRect(SDL_Renderer* r, const SDL_Rect* rect) const;
 };
-template<typename T> inline T Max(T a, T b) {
-	return a > b ? a : b;
-}
-
-template<typename T> inline T Min(T a, T b) {
-	return a < b ? a : b;
-}
