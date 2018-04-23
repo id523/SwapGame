@@ -42,6 +42,7 @@ DELETER_CLASS(SDL_Renderer, SDL_DestroyRenderer);
 DELETER_CLASS(SDL_Window, SDL_DestroyWindow);
 DELETER_CLASS(SDL_Surface, SDL_FreeSurface);
 DELETER_CLASS(SDL_Texture, SDL_DestroyTexture);
+DELETER_CLASS(TTF_Font, TTF_CloseFont);
 
 GAME_STATE PerformSwap(GAME_STATE s, int sp1, bool vertical) {
 	int sp2 = sp1 + (vertical ? BOARD_WIDTH : 1);
@@ -137,11 +138,17 @@ void SDLmain(int argc, char** argv)
 
 	// Load texture from texture file
 	SDL_Surface* imgsurf = IMG_Load("SwapGameTex.png");
-	if (!imgsurf) throw SDLError("IMG_Load");
+	if (!imgsurf) throw SDLError("IMG_Load", IMG_GetError);
 	unique_ptr<SDL_Surface, SDL_Surface_Deleter> imgsurf_P(imgsurf);
 	SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, imgsurf);
 	if (!tex) throw SDLError("SDL_CreateTextureFromSurface");
 	unique_ptr<SDL_Texture, SDL_Texture_Deleter> tex_P(tex);
+
+	// Load font
+	TTF_Font* font = TTF_OpenFont("OpenSans_Bold.ttf", 12);
+	if (!font) throw SDLError("TTF_OpenFont", TTF_GetError);
+	unique_ptr<TTF_Font, TTF_Font_Deleter> font_P(font);
+
 	imgsurf_P.release();
 	// Texture-map coordinates
 	SDL_Rect Rect_Black;
@@ -305,7 +312,9 @@ int main(int argc, char** argv)
 	catch (SDLError& ex)
 	{
 		cout << ex.what() << endl;
+#ifdef _DEBUG
 		getchar();
+#endif
 		return 1;
 	}
 }
