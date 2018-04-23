@@ -2,6 +2,13 @@
 #include <SDL.h>
 #include <string>
 
+char* my_strdup(const char* s) {
+	size_t len = strlen(s);
+	char* buf = (char*)malloc(len + 1);
+	if (!buf) throw std::bad_alloc();
+	return (char*)memcpy(buf, s, len + 1);
+}
+
 SDLError::SDLError() : SDLError((ErrorFunction)nullptr) {
 }
 
@@ -11,7 +18,7 @@ SDLError::SDLError(ErrorFunction ef)
 	std::string s;
 	s += "SDL Error: ";
 	s += ef();
-	msg = _strdup(s.c_str());
+	msg = my_strdup(s.c_str());
 }
 
 SDLError::SDLError(const char * func) : SDLError(func, nullptr) {
@@ -25,7 +32,7 @@ SDLError::SDLError(const char* func, ErrorFunction ef)
 	s += func;
 	s += ": ";
 	s += ef();
-	msg = _strdup(s.c_str());
+	msg = my_strdup(s.c_str());
 }
 
 SDLError::~SDLError()
