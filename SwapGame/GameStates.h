@@ -11,8 +11,7 @@ typedef long long GameState;
 #define START_X 0
 #define START_Y 0
 
-#define PLAYER_BLACK 1
-#define PLAYER_WHITE 2
+enum Player { PLAYER_NONE = 0, PLAYER_BLACK, PLAYER_WHITE };
 
 GameState PerformSwap(GameState s, int sp1, bool vertical) {
 	int sp2 = sp1 + (vertical ? BOARD_WIDTH : 1);
