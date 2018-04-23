@@ -135,6 +135,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AI.cpp" />
+    <ClCompile Include="GameStates.cpp" />
     <ClCompile Include="IMGi.cpp" />
     <ClCompile Include="EntryPoint.cpp" />
     <ClCompile Include="SDLi.cpp" />
