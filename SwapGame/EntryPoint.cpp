@@ -35,14 +35,19 @@ using namespace std;
 #define PLAYER_BLACK 1
 #define PLAYER_WHITE 2
 
-#define DELETER_CLASS(c, d) \
-struct c##_Deleter { void operator()(c* r) { if (r) d(r); } }
+#define MAKE_RECT(VAR, X, Y, W, H) SDL_Rect VAR; VAR.x = X; VAR.y = Y; VAR.w = W; VAR.h = H
+#define MAKE_COLOR(VAR, R, G, B, A) SDL_Color VAR; VAR.r = R; VAR.g = G; VAR.b = B; VAR.a = A
+
+#define DELETER_CLASS(c, d) struct c##_Deleter { void operator()(c* r) { if (r) d(r); } }
 
 DELETER_CLASS(SDL_Renderer, SDL_DestroyRenderer);
 DELETER_CLASS(SDL_Window, SDL_DestroyWindow);
 DELETER_CLASS(SDL_Surface, SDL_FreeSurface);
 DELETER_CLASS(SDL_Texture, SDL_DestroyTexture);
 DELETER_CLASS(TTF_Font, TTF_CloseFont);
+
+#define SAFEPTR(x) unique_ptr<x, x##_Deleter>
+#define MAKESAFE(t, v) unique_ptr<t, t##_Deleter> v##_P(v)
 
 GAME_STATE PerformSwap(GAME_STATE s, int sp1, bool vertical) {
 	int sp2 = sp1 + (vertical ? BOARD_WIDTH : 1);
@@ -124,6 +129,22 @@ float lerp(float a, float b, float x) {
 	return a * (1 - x) + b * x;
 }
 
+SAFEPTR(SDL_Texture) RenderFontTexture(
+	SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color c, SDL_Rect* bounds = nullptr) {
+	SDL_Surface* text_surf = TTF_RenderText_Blended(font, text, c);
+	if (!text_surf) throw SDLError("TTF_RenderText_Blended", TTF_GetError);
+	if (bounds) {
+		bounds->x = 0;
+		bounds->y = 0;
+		bounds->w = text_surf->w;
+		bounds->h = text_surf->h;
+	}
+	MAKESAFE(SDL_Surface, text_surf);
+	SDL_Texture* text_tex = SDL_CreateTextureFromSurface(renderer, text_surf);
+	if (!text_tex) throw SDLError("SDL_CreateTextureFromSurface");
+	return move(SAFEPTR(SDL_Texture)(text_tex));
+}
+
 void SDLmain(int argc, char** argv)
 {
 	// Boilerplate: Create window and renderer
@@ -131,41 +152,38 @@ void SDLmain(int argc, char** argv)
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		800, 480, 0);
 	if (!window) throw SDLError("SDL_CreateWindow");
-	unique_ptr<SDL_Window, SDL_Window_Deleter> window_P(window);
+	MAKESAFE(SDL_Window, window);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RendererFlags::SDL_RENDERER_PRESENTVSYNC);
 	if (!renderer) throw SDLError("SDL_CreateRenderer");
-	unique_ptr<SDL_Renderer, SDL_Renderer_Deleter> renderer_P(renderer);
+	MAKESAFE(SDL_Renderer, renderer);
 
 	// Load texture from texture file
 	SDL_Surface* imgsurf = IMG_Load("SwapGameTex.png");
 	if (!imgsurf) throw SDLError("IMG_Load", IMG_GetError);
-	unique_ptr<SDL_Surface, SDL_Surface_Deleter> imgsurf_P(imgsurf);
+	MAKESAFE(SDL_Surface, imgsurf);
 	SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, imgsurf);
 	if (!tex) throw SDLError("SDL_CreateTextureFromSurface");
-	unique_ptr<SDL_Texture, SDL_Texture_Deleter> tex_P(tex);
+	MAKESAFE(SDL_Texture, tex);
+	imgsurf_P.release();
 
 	// Load font
-	TTF_Font* font = TTF_OpenFont("OpenSans_Bold.ttf", 12);
+	TTF_Font* font = TTF_OpenFont("OpenSans_Bold.ttf", 18);
 	if (!font) throw SDLError("TTF_OpenFont", TTF_GetError);
-	unique_ptr<TTF_Font, TTF_Font_Deleter> font_P(font);
+	MAKESAFE(TTF_Font, font);
 
-	imgsurf_P.release();
+	// Declare colors
+	MAKE_COLOR(Color_White, 255, 255, 255, SDL_ALPHA_OPAQUE);
+
+	// Render texts
+	SDL_Rect text_White_Bounds;
+	SAFEPTR(SDL_Texture) text_White = RenderFontTexture(renderer, font, "White", Color_White, &text_White_Bounds);
+	SDL_Rect text_Black_Bounds;
+	SAFEPTR(SDL_Texture) text_Black = RenderFontTexture(renderer, font, "Black", Color_White, &text_Black_Bounds);
+
 	// Texture-map coordinates
-	SDL_Rect Rect_Black;
-	Rect_Black.x = 0;
-	Rect_Black.y = 0;
-	Rect_Black.w = 80;
-	Rect_Black.h = 80;
-	SDL_Rect Rect_White;
-	Rect_White.x = 80;
-	Rect_White.y = 0;
-	Rect_White.w = 80;
-	Rect_White.h = 80;
-	SDL_Rect Rect_Board;
-	Rect_Board.x = 0;
-	Rect_Board.y = 80;
-	Rect_Board.w = 480;
-	Rect_Board.h = 480;
+	MAKE_RECT(Rect_Black, 0, 0, 80, 80);
+	MAKE_RECT(Rect_White, 80, 0, 80, 80);
+	MAKE_RECT(Rect_Board, 0, 80, 480, 480);
 
 	// Nine-slice textures
 	unique_ptr<NineSlice> HighlightIllegal = make_unique<NineSlice>(tex, 160, 0, 15, 25, 40, 15, 25, 40);
@@ -292,7 +310,10 @@ void SDLmain(int argc, char** argv)
 		}
 
 		// Draw UI elements on the screen
-		
+		SDL_Texture* renderText = currentPlayer == PLAYER_BLACK ? text_Black.get() : text_White.get();
+		const SDL_Rect* renderBounds = currentPlayer == PLAYER_BLACK ? &text_Black_Bounds : &text_White_Bounds;
+		dest = *renderBounds;
+		SDL_RenderCopy(renderer, renderText, renderBounds, &dest);
 
 		// Update the screen
 		SDL_RenderPresent(renderer);
